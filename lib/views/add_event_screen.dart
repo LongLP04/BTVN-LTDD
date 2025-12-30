@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:permission_handler/permission_handler.dart'; // MỚI: Thêm để quản lý quyền
+import 'package:permission_handler/permission_handler.dart';
 import '../services/api_service.dart';
 import '../services/notification_service.dart';
 
@@ -129,102 +129,269 @@ class _AddEventScreenState extends State<AddEventScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Thêm lịch trình mới")),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextField(
-              controller: _titleController,
-              decoration: const InputDecoration(
-                labelText: "Tiêu đề",
-                hintText: "Nhập tên công việc...",
+      backgroundColor: Colors.indigo.shade50,
+      appBar: AppBar(
+        backgroundColor: Colors.indigo,
+        foregroundColor: Colors.white,
+        title: const Text('Thêm lịch trình mới'),
+      ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFE8EAF6), Color(0xFFEEF2FF)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              _buildSectionHeader(
+                context,
+                icon: Icons.event_note,
+                title: 'Thông tin sự kiện',
+                subtitle: 'Đặt tiêu đề, mô tả và phân loại chi tiết',
               ),
-            ),
-            TextField(
-              controller: _descController,
-              decoration: const InputDecoration(
-                labelText: "Mô tả",
-                hintText: "Ghi chú thêm...",
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              "Chọn loại sự kiện:",
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            _categories.isEmpty
-                ? const Center(child: CircularProgressIndicator())
-                : DropdownButtonFormField<int>(
-                    value: _selectedCategoryId,
-                    items: _categories.map((cat) {
-                      final color = Color(
-                        int.parse(cat['colorCode'].replaceAll('#', '0xff')),
-                      );
-                      return DropdownMenuItem<int>(
-                        value: cat['id'],
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 15,
-                              height: 15,
-                              decoration: BoxDecoration(
-                                color: color,
-                                shape: BoxShape.circle,
-                              ),
+              const SizedBox(height: 16),
+              _buildCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: _titleController,
+                      decoration: const InputDecoration(
+                        labelText: 'Tiêu đề',
+                        prefixIcon: Icon(Icons.title_outlined),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _descController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: 'Mô tả',
+                        prefixIcon: Icon(Icons.notes_outlined),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Chọn loại sự kiện',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 12),
+                    _categories.isEmpty
+                        ? const Center(child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                            child: CircularProgressIndicator(),
+                          ))
+                        : DropdownButtonFormField<int>(
+                            value: _selectedCategoryId,
+                            decoration: const InputDecoration(
+                              labelText: 'Danh mục',
+                              prefixIcon: Icon(Icons.category_outlined),
                             ),
-                            const SizedBox(width: 10),
-                            Text(cat['categoryName']),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (val) => setState(() => _selectedCategoryId = val),
-                  ),
-            const SizedBox(height: 10),
-            ListTile(
-              title: Text("Ngày: ${DateFormat('dd/MM/yyyy').format(_selectedDate)}"),
-              trailing: const Icon(Icons.calendar_month),
-              onTap: () async {
-                DateTime? picked = await showDatePicker(
-                  context: context,
-                  initialDate: _selectedDate,
-                  firstDate: DateTime(2020),
-                  lastDate: DateTime(2030),
-                );
-                if (picked != null) setState(() => _selectedDate = picked);
-              },
-            ),
-            ListTile(
-              title: Text("Giờ: ${_selectedTime.format(context)}"),
-              trailing: const Icon(Icons.access_time),
-              onTap: () async {
-                TimeOfDay? picked = await showTimePicker(
-                  context: context,
-                  initialTime: _selectedTime,
-                );
-                if (picked != null) setState(() => _selectedTime = picked);
-              },
-            ),
-            const SizedBox(height: 30),
-            Center(
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(padding: const EdgeInsets.all(15)),
-                  onPressed: _isSaving ? null : _saveEvent,
-                  child: _isSaving
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text("Lưu sự kiện & Đặt nhắc nhở"),
+                            items: _categories.map((cat) {
+                              final color = Color(
+                                int.parse(cat['colorCode'].replaceAll('#', '0xff')),
+                              );
+                              return DropdownMenuItem<int>(
+                                value: cat['id'],
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 16,
+                                      height: 16,
+                                      decoration: BoxDecoration(
+                                        color: color,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Text(cat['categoryName']),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (val) => setState(() => _selectedCategoryId = val),
+                          ),
+                  ],
                 ),
               ),
+              const SizedBox(height: 24),
+              _buildSectionHeader(
+                context,
+                icon: Icons.calendar_today,
+                title: 'Thời gian diễn ra',
+                subtitle: 'Thiết lập ngày giờ chính xác cho lịch trình',
+              ),
+              const SizedBox(height: 16),
+              _buildCard(
+                child: Column(
+                  children: [
+                    _InputChipButton(
+                      label: 'Ngày: ${DateFormat('dd/MM/yyyy').format(_selectedDate)}',
+                      icon: Icons.calendar_month_outlined,
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: _selectedDate,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2035),
+                        );
+                        if (picked != null) {
+                          setState(() => _selectedDate = picked);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    _InputChipButton(
+                      label: 'Giờ: ${_selectedTime.format(context)}',
+                      icon: Icons.schedule,
+                      onTap: () async {
+                        final picked = await showTimePicker(
+                          context: context,
+                          initialTime: _selectedTime,
+                        );
+                        if (picked != null) {
+                          setState(() => _selectedTime = picked);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 28),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: Colors.indigo,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                  ),
+                  onPressed: _isSaving ? null : _saveEvent,
+                  icon: _isSaving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.save_outlined),
+                  label: Text(
+                    _isSaving ? 'Đang lưu...' : 'Lưu sự kiện & đặt nhắc nhở',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Row(
+      children: [
+        CircleAvatar(
+          radius: 26,
+          backgroundColor: Colors.indigo.withOpacity(0.1),
+          child: Icon(icon, color: Colors.indigo),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              Text(
+                subtitle,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.blueGrey,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCard({required Widget child}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x11000000),
+            offset: Offset(0, 10),
+            blurRadius: 24,
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+class _InputChipButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _InputChipButton({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: Colors.indigo.withOpacity(0.05),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.indigo),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.copyWith(fontWeight: FontWeight.w600),
+              ),
             ),
+            const Icon(Icons.chevron_right, color: Colors.indigo),
           ],
         ),
       ),

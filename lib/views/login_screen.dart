@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:lephuoclong_btvn/views/admin_screen.dart';
-import 'package:lephuoclong_btvn/views/calendar_screen.dart';
 import 'package:lephuoclong_btvn/views/register_screen.dart';
 import 'package:lephuoclong_btvn/views/staff_screen.dart';
+import 'package:lephuoclong_btvn/views/user_home_screen.dart';
 import '../services/api_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -47,7 +47,7 @@ class _LoginScreenState extends State<LoginScreen> {
           destination = const StaffScreen();
           break;
         case 'User':
-          destination = const CalendarScreen();
+          destination = const UserHomeScreen();
           break;
       }
 
@@ -73,39 +73,96 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Đăng Nhập")), // Thêm const
-      body: Padding(
-        padding: const EdgeInsets.all(16.0), // Thêm const
-        child: Column(
-          children: [
-            TextField(
-              controller: _userController,
-              decoration: const InputDecoration(
-                labelText: "Tài khoản",
-              ), // Thêm const
+      backgroundColor: Colors.blue.shade50,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF1565C0), Color(0xFF5E92F3)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 30),
+                Text(
+                  'Chào mừng trở lại',
+                  style: Theme.of(context)
+                      .textTheme
+                      .headlineSmall
+                      ?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  'Đăng nhập để tiếp tục quản lý lịch của bạn',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                ),
+                const SizedBox(height: 32),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x22000000),
+                        offset: Offset(0, 16),
+                        blurRadius: 32,
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextField(
+                        controller: _userController,
+                        decoration: const InputDecoration(
+                          labelText: 'Tài khoản',
+                          prefixIcon: Icon(Icons.person_outline),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _passController,
+                        decoration: const InputDecoration(
+                          labelText: 'Mật khẩu',
+                          prefixIcon: Icon(Icons.lock_outline),
+                        ),
+                        obscureText: true,
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        onPressed: _handleLogin,
+                        child: const Text(
+                          'Đăng nhập',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                          );
+                        },
+                        child: const Text('Chưa có tài khoản? Đăng ký ngay'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            TextField(
-              controller: _passController,
-              decoration: const InputDecoration(
-                labelText: "Mật khẩu",
-              ), // Thêm const
-              obscureText: true,
-            ),
-            const SizedBox(height: 20), // Thêm const
-            ElevatedButton(
-              onPressed: _handleLogin,
-              child: const Text("Đăng Nhập"),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                );
-              },
-              child: const Text('Chưa có tài khoản? Đăng ký'),
-            ),
-          ],
+          ),
         ),
       ),
     );

@@ -125,19 +125,31 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           );
 
     return Scaffold(
+      backgroundColor: Colors.deepPurple.shade50,
       appBar: AppBar(
+        backgroundColor: Colors.deepPurple,
+        foregroundColor: Colors.white,
         title: const Text('Danh sách người dùng'),
       ),
-      body: RefreshIndicator(
-        onRefresh: _loadUsers,
-        child: _isLoading && _users.isEmpty
-            ? ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                children: const [
-                  SizedBox(height: 200, child: Center(child: CircularProgressIndicator())),
-                ],
-              )
-            : body,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFF3E5F5), Color(0xFFEDE7F6)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: RefreshIndicator(
+          onRefresh: _loadUsers,
+          child: _isLoading && _users.isEmpty
+              ? ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  children: const [
+                    SizedBox(height: 200, child: Center(child: CircularProgressIndicator())),
+                  ],
+                )
+              : body,
+        ),
       ),
     );
   }
@@ -147,97 +159,114 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     final isUpdating = _updatingUsers.contains(user.userName);
     final avatarLabel = user.userName.isNotEmpty ? user.userName[0].toUpperCase() : '?';
 
-    return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFFFFFF), Color(0xFFEDE7F6)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1F000000),
+            offset: Offset(0, 10),
+            blurRadius: 22,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(radius: 22, backgroundColor: Colors.deepPurple.withOpacity(0.1), child: Text(avatarLabel, style: const TextStyle(color: Colors.deepPurple))),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user.userName,
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      user.email ?? 'Không có email',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              _buildRoleChip(user),
+            ],
+          ),
+          if (!isEditable)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Text(
+                _isCurrentUser(user)
+                    ? 'Bạn đang đăng nhập bằng tài khoản này (vai trò Admin).'
+                    : 'Không thể thay đổi vai trò Admin.',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: Colors.grey[600]),
+              ),
+            )
+          else ...[
+            const SizedBox(height: 16),
             Row(
               children: [
-                CircleAvatar(
-                  radius: 22,
-                  child: Text(avatarLabel),
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    value: _selectionFor(user),
+                    decoration: const InputDecoration(
+                      labelText: 'Chọn vai trò mới',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: _editableRoles
+                        .map(
+                          (role) => DropdownMenuItem(
+                            value: role,
+                            child: Text(role),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() => _roleSelections[user.userName] = value);
+                      }
+                    },
+                  ),
                 ),
                 const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        user.userName,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      Text(
-                        user.email ?? 'Không có email',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
+                SizedBox(
+                  height: 48,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurple,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onPressed: isUpdating ? null : () => _updateRole(user),
+                    child: isUpdating
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Text('Lưu'),
                   ),
                 ),
-                _buildRoleChip(user),
               ],
             ),
-            if (!isEditable)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Text(
-                  _isCurrentUser(user)
-                      ? 'Bạn đang đăng nhập bằng tài khoản này (vai trò Admin).'
-                      : 'Không thể thay đổi vai trò Admin.',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(color: Colors.grey[600]),
-                ),
-              )
-            else ...[
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      value: _selectionFor(user),
-                      decoration: const InputDecoration(
-                        labelText: 'Chọn vai trò mới',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: _editableRoles
-                          .map(
-                            (role) => DropdownMenuItem(
-                              value: role,
-                              child: Text(role),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() => _roleSelections[user.userName] = value);
-                        }
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  SizedBox(
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: isUpdating ? null : () => _updateRole(user),
-                      child: isUpdating
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text('Lưu'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
           ],
-        ),
+        ],
       ),
     );
   }
