@@ -122,9 +122,28 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     itemCount: selectedEvents.length,
                     itemBuilder: (context, index) {
                       final event = selectedEvents[index];
-                      bool isCompleted = event.status == "Completed";
+                      final status = event.status.toLowerCase();
+                      final isHidden = status == 'hidden';
+                      final isCompleted = status == 'completed';
 
-                      // Bọc Card trong Dismissible để thực hiện tính năng vuốt xóa
+                      if (isHidden) {
+                        return Card(
+                          elevation: 2,
+                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          child: ListTile(
+                            leading: const Icon(Icons.visibility_off, color: Colors.grey),
+                            title: const Text(
+                              'Sự kiện đã bị admin ẩn',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            subtitle: const Text(
+                              'Hiện tại lịch này đã bị admin ẩn, liên hệ admin để được giải quyết.',
+                            ),
+                          ),
+                        );
+                      }
+
                       return Dismissible(
                         key: Key(event.id.toString()),
                         direction: DismissDirection.endToStart,
@@ -155,7 +174,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             });
                             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Đã xóa công việc")));
                           } else {
-                            _fetchEvents(); // Tải lại nếu xóa thất bại ở server
+                            _fetchEvents();
                           }
                         },
                         child: Card(
@@ -167,10 +186,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
                               width: 5,
                               height: 30,
                               decoration: BoxDecoration(
-                                color: isCompleted 
-                                    ? Colors.grey 
-                                    : (event.colorCode != null 
-                                        ? Color(int.parse(event.colorCode!.replaceAll('#', '0xff'))) 
+                                color: isCompleted
+                                    ? Colors.grey
+                                    : (event.colorCode != null
+                                        ? Color(
+                                            int.parse(event.colorCode!.replaceAll('#', '0xff')),
+                                          )
                                         : Colors.blue),
                                 borderRadius: BorderRadius.circular(10),
                               ),
@@ -179,16 +200,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
                               event.title,
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                decoration: isCompleted ? TextDecoration.lineThrough : null,
+                                decoration:
+                                    isCompleted ? TextDecoration.lineThrough : null,
                                 color: isCompleted ? Colors.grey : Colors.black,
                               ),
                             ),
                             subtitle: Text(event.categoryName ?? "Chưa phân loại"),
-                            trailing: isCompleted 
+                            trailing: isCompleted
                                 ? const Icon(Icons.check_circle, color: Colors.green, size: 22)
                                 : Text(
-                                    event.status, 
-                                    style: const TextStyle(fontSize: 10, color: Colors.blueGrey)
+                                    event.status,
+                                    style: const TextStyle(fontSize: 10, color: Colors.blueGrey),
                                   ),
                           ),
                         ),

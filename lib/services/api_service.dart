@@ -1,8 +1,9 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/app_user.dart';
 import '../utils/constants.dart';
 
 class ApiService {
@@ -20,98 +21,88 @@ class ApiService {
 
   // Thêm Token vào Header cho mỗi Request
   Future<void> _setAuthHeader() async {
-      final prefs = await SharedPreferences.getInstance();
-      String? token = prefs.getString('token');
-      if (token != null) {
-        _dio.options.headers['Authorization'] = 'Bearer $token';
-      }
-    }
-    // Thêm vào file lib/services/api_service.dart
-    Future<List<dynamic>> getCategories() async {
-      await _setAuthHeader();
-      try {
-        final res = await _dio.get('/Categories');
-        return res.data;
-      } catch (e) {
-        return []; // Trả về danh sách trống nếu lỗi
-      }
-    }
-    Future<void> completeEvent(int id) async {
-      await _setAuthHeader();
-      try {
-        // Gọi trực tiếp vào endpoint chuyên biệt để tránh gửi thiếu dữ liệu model
-        await _dio.put('/Events/$id/complete');
-      } on DioException catch (e) {
-        // In lỗi chi tiết ra console để dễ debug nếu vẫn lỗi
-        print("Chi tiết lỗi 400: ${e.response?.data}");
-        throw Exception("Không thể cập nhật trạng thái");
-      }
-    }
-    // Trong lib/services/api_service.dart
-    Future<bool> deleteEvent(int id) async {
-      await _setAuthHeader();
-      try {
-        final res = await _dio.delete('/Events/$id');
-        return res.statusCode == 200 || res.statusCode == 204;
-      } catch (e) {
-        debugPrint("Lỗi xóa sự kiện: $e");
-        return false;
-      }
-    }
-    // --- QUẢN LÝ CATEGORY (Dành cho Admin & Staff) ---
-
-  Future<void> createCategory(Map<String, dynamic> data) async {
-    await _setAuthHeader();
-    try {
-      await _dio.post('/Categories', data: data);
-    } catch (e) {
-      throw Exception("Không thể thêm loại mới");
+    final prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('token');
+    if (token != null) {
+      _dio.options.headers['Authorization'] = 'Bearer $token';
     }
   }
 
-  Future<void> updateCategory(int id, Map<String, dynamic> data) async {
+  Future<List<dynamic>> getCategories() async {
     await _setAuthHeader();
     try {
-      await _dio.put('/Categories/$id', data: data);
+      final res = await _dio.get('/Categories');
+      return (res.data as List?) ?? [];
     } catch (e) {
-      throw Exception("Không thể cập nhật loại");
-    }
-  }
-
-  Future<void> deleteCategory(int id) async {
-    await _setAuthHeader();
-    try {
-      await _dio.delete('/Categories/$id');
-    } catch (e) {
-      throw Exception("Không thể xóa loại này");
-    }
-  }
-
-  // --- QUẢN LÝ EVENT TỔNG HỢP (Dành cho Admin & Staff) ---
-
-  Future<List<dynamic>> getAllEventsForStaff() async {
-    await _setAuthHeader();
-    try {
-      // Gọi vào AdminController như bạn đã viết ở Backend
-      final res = await _dio.get('/Admin/all-data');
-      return res.data;
-    } catch (e) {
-      debugPrint("Lỗi lấy dữ liệu tổng hợp: $e");
+      debugPrint('Lỗi tải categories: $e');
       return [];
     }
   }
 
-  // Hàm ẩn Event (Chỉ Admin mới có quyền gọi thành công)
+  Future<void> createCategory(String name, String colorCode) async {
+    await _setAuthHeader();
+    await _dio.post(
+      '/Categories',
+      data: {'categoryName': name, 'colorCode': colorCode},
+    );
+  }
+
+  Future<void> updateCategory(int id, String name, String colorCode) async {
+    await _setAuthHeader();
+    await _dio.put(
+      '/Categories/$id',
+      data: {'categoryName': name, 'colorCode': colorCode},
+    );
+  }
+
+  Future<void> deleteCategory(int id) async {
+    await _setAuthHeader();
+    await _dio.delete('/Categories/$id');
+  }
+
+  Future<void> completeEvent(int id) async {
+    await _setAuthHeader();
+    try {
+      await _dio.put('/Events/$id/complete');
+    } on DioException catch (e) {
+      debugPrint('Chi tiết lỗi 400: ${e.response?.data}');
+      throw Exception('Không thể cập nhật trạng thái');
+    }
+  }
+
+  Future<bool> deleteEvent(int id) async {
+    await _setAuthHeader();
+    try {
+      final res = await _dio.delete('/Events/$id');
+      return res.statusCode == 200 || res.statusCode == 204;
+    } catch (e) {
+      debugPrint('Lỗi xóa sự kiện: $e');
+      return false;
+    }
+  }
+
+  Future<List<dynamic>> getAllEventsForStaff() async {
+    await _setAuthHeader();
+    try {
+      final res = await _dio.get('/Admin/all-data');
+      return (res.data as List?) ?? [];
+    } catch (e) {
+      debugPrint('Lỗi lấy dữ liệu tổng hợp: $e');
+      return [];
+    }
+  }
+
   Future<bool> adminHideEvent(int id) async {
     await _setAuthHeader();
     try {
       final res = await _dio.patch('/Admin/hide/$id');
       return res.statusCode == 200;
     } catch (e) {
-      debugPrint("Lỗi khi ẩn sự kiện: $e");
+      debugPrint('Lỗi khi ẩn sự kiện: $e');
       return false;
     }
   }
+
   Future<Response?> login(String username, String password) async {
     try {
       final res = await _dio.post(
@@ -212,6 +203,32 @@ class ApiService {
     await _setAuthHeader();
     final res = await _dio.patch('/Admin/hide/$id');
     return res.statusCode == 200;
+  }
+
+  Future<List<AppUser>> getUsersWithRoles() async {
+    await _setAuthHeader();
+    try {
+      final res = await _dio.get('/Admin/users');
+      final payload = res.data as List?;
+      if (payload == null) return [];
+      return payload
+          .map((item) => AppUser.fromJson(Map<String, dynamic>.from(item)))
+          .toList();
+    } catch (e) {
+      debugPrint('Lỗi tải danh sách người dùng: $e');
+      return [];
+    }
+  }
+
+  Future<void> updateUserRole(String username, String role) async {
+    await _setAuthHeader();
+    await _dio.post(
+      '/Admin/update-role',
+      data: {
+        'username': username,
+        'role': role,
+      },
+    );
   }
 
   String _resolveServerError(DioException exception) {
