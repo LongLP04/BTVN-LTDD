@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lephuoclong_btvn/views/statistics_screen.dart';
 import 'package:lephuoclong_btvn/views/task_list_screen.dart';
+import 'package:lephuoclong_btvn/views/setup_2fa_screen.dart'; // THÊM IMPORT NÀY
 import '../models/event.dart';
 import '../services/api_service.dart';
 import '../widgets/logout_button.dart';
@@ -100,13 +101,13 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: _loadData,
-        child: Column( // Sử dụng Column kết hợp Expanded để tránh lỗi layout
+        child: Column(
           children: [
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: _buildHeroCard(context),
             ),
-            Expanded( // Bọc danh sách vào Expanded để sửa lỗi child.hasSize
+            Expanded(
               child: _isLoading && _events.isEmpty
                   ? const Center(child: CircularProgressIndicator())
                   : _events.isEmpty
@@ -164,22 +165,46 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
           ),
           const SizedBox(height: 16),
+          // CẬP NHẬT PHẦN NÚT BẤM TẠI ĐÂY
           Align(
             alignment: Alignment.centerLeft,
-            child: OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.white,
-                side: const BorderSide(color: Colors.white70),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const CalendarScreen()),
-                );
-              },
-              icon: const Icon(Icons.calendar_today_outlined, size: 18),
-              label: const Text('Mở lịch chi tiết'),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Colors.white70),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const CalendarScreen()),
+                    );
+                  },
+                  icon: const Icon(Icons.calendar_today_outlined, size: 18),
+                  label: const Text('Mở lịch chi tiết'),
+                ),
+                // NÚT BẢO MẬT 2FA MỚI
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Colors.orangeAccent),
+                    backgroundColor: Colors.orange.withOpacity(0.2),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const Setup2FAScreen()),
+                    );
+                  },
+                  icon: const Icon(Icons.security, size: 18),
+                  label: const Text('Bảo mật 2FA'),
+                ),
+              ],
             ),
           ),
         ],
@@ -188,7 +213,6 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   }
 
   Widget _buildEventTile(BuildContext context, Event event) {
-    // XỬ LÝ GIAO DIỆN KHI SỰ KIỆN BỊ ẨN (Giống CalendarScreen)
     if (event.status.toLowerCase() == 'hidden') {
       return Container(
         margin: const EdgeInsets.only(bottom: 16),
@@ -224,7 +248,6 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
       );
     }
 
-    // GIAO DIỆN SỰ KIỆN BÌNH THƯỜNG
     final accentColor = _resolveColor(event.colorCode) ?? Colors.blueAccent;
     final statusColor = event.status.toLowerCase() == 'completed'
         ? Colors.green

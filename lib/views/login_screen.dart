@@ -16,9 +16,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _userController = TextEditingController();
   final _passController = TextEditingController();
   final _apiService = ApiService();
-  bool _isGoogleLoading = false; // Trạng thái chờ cho Google Login
+  bool _isGoogleLoading = false;
 
-  // Hàm điều hướng chung dựa trên Role
   void _navigateToDashboard(String role) {
     Widget destination;
     switch (role) {
@@ -40,7 +39,62 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Xử lý đăng nhập thông thường
+  // --- MỚI: Hộp thoại nhập mã OTP 2FA ---
+  void _showTwoFactorDialog(String username) {
+    final otpController = TextEditingController();
+    showDialog(
+      context: context,
+      barrierDismissible: false, // Bắt buộc người dùng phải nhập hoặc nhấn Hủy
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Xác thực 2 lớp'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Vui lòng nhập mã 6 số từ ứng dụng Google Authenticator của bạn.'),
+            const SizedBox(height: 20),
+            TextField(
+              controller: otpController,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Mã xác thực',
+                prefixIcon: Icon(Icons.security),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final response = await _apiService.verify2FALogin(
+                username,
+                otpController.text,
+              );
+              if (!mounted) return;
+
+              if (response != null && response.statusCode == 200) {
+                Navigator.pop(context); // Đóng Dialog
+                final role = response.data['role'] as String? ?? 'User';
+                _navigateToDashboard(role);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Mã xác thực không chính xác')),
+                );
+              }
+            },
+            child: const Text('Xác nhận'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _handleLogin() async {
     final response = await _apiService.login(
       _userController.text,
@@ -50,14 +104,14 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (response?.statusCode == 200 && response?.data != null) {
-      final role = response!.data['role'] as String? ?? await _apiService.getUserRole();
-      
-      if (role != null) {
-        _navigateToDashboard(role);
+      // KIỂM TRA NẾU BACKEND YÊU CẦU 2FA
+      if (response!.data['requiresTwoFactor'] == true) {
+        _showTwoFactorDialog(response.data['username']);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Không xác định quyền người dùng.')),
-        );
+        final role = response.data['role'] as String? ?? await _apiService.getUserRole();
+        if (role != null) {
+          _navigateToDashboard(role);
+        }
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -66,12 +120,9 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // --- MỚI: Xử lý đăng nhập Google ---
   void _handleGoogleLogin() async {
     setState(() => _isGoogleLoading = true);
-    
     final response = await _apiService.loginWithGoogle();
-    
     if (!mounted) return;
     setState(() => _isGoogleLoading = false);
 
@@ -87,6 +138,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Giữ nguyên phần UI build của bạn
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -163,32 +215,47 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: const Text('Đăng nhập',
                               style: TextStyle(fontWeight: FontWeight.w600)),
                         ),
-                        
-                        // --- MỚI: Nút Google Login ---
-                        // Thay thế đoạn nút Google cũ bằng đoạn này:
-const SizedBox(height: 16),
-Center(
-  child: SizedBox(
-    width: double.infinity, // Giới hạn chiều rộng để tránh vạch vàng
-    child: OutlinedButton.icon(
-      style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        side: const BorderSide(color: Colors.grey),
-      ),
-      onPressed: _isGoogleLoading ? null : _handleGoogleLogin,
-      icon: _isGoogleLoading 
-        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-        // Thay link ảnh này để tránh lỗi 404
-        : Image.network(
-            'https://www.gstatic.com/images/branding/product/2x/googleg_48dp.png',
-            height: 24,
-            errorBuilder: (context, error, stackTrace) => const Icon(Icons.login), // Hiện icon nếu link chết
-          ),
-      label: const Text('Tiếp tục với Google', style: TextStyle(color: Colors.black87)),
-    ),
-  ),
-),
+                        const SizedBox(height: 16),
+                        Center(
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16)),
+                                side: const BorderSide(color: Colors.grey),
+                              ),
+                              onPressed:
+                                  _isGoogleLoading ? null : _handleGoogleLogin,
+                              icon: _isGoogleLoading
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2))
+                                  : Image.network(
+                                      'https://www.gstatic.com/images/branding/product/2x/googleg_48dp.png',
+                                      height: 24,
+                                      errorBuilder:
+                                          (context, error, stackTrace) =>
+                                              const Icon(Icons.login),
+                                    ),
+                              label: const Text('Tiếp tục với Google',
+                                  style: TextStyle(color: Colors.black87)),
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const RegisterScreen()),
+                            );
+                          },
+                          child: const Text('Chưa có tài khoản? Đăng ký ngay'),
+                        ),
                       ],
                     ),
                   ),
