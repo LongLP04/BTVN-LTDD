@@ -19,12 +19,14 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   bool _isLoading = false;
   String? _userName;
   List<Event> _allEvents = [];
+
   @override
   void initState() {
     super.initState();
     _fetchEvents();
     _loadData();
   }
+
   Future<void> _fetchEvents() async {
     setState(() => _isLoading = true);
     try {
@@ -38,6 +40,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
       setState(() => _isLoading = false);
     }
   }
+
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
@@ -45,6 +48,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
       final rawEvents = await _api.getEvents(false);
       final events = rawEvents.map((e) => Event.fromJson(e)).toList()
         ..sort((a, b) => a.eventDate.compareTo(b.eventDate));
+      
       if (!mounted) return;
       setState(() {
         _userName = username;
@@ -68,8 +72,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
         title: const Text('Lịch cá nhân'),
-        actions:[
-        // Nút Thống kê
+        actions: [
           IconButton(
             icon: const Icon(Icons.pie_chart),
             tooltip: "Thống kê",
@@ -82,7 +85,6 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
               );
             },
           ),
-          
           IconButton(
             icon: const Icon(Icons.list_alt),
             tooltip: "Danh sách công việc",
@@ -93,35 +95,34 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
               ).then((_) => _fetchEvents());
             },
           ),
-           const LogoutButton(),
-          ], 
+          const LogoutButton(),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: _loadData,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
+        child: Column( // Sử dụng Column kết hợp Expanded để tránh lỗi layout
           children: [
-            _buildHeroCard(context),
-            const SizedBox(height: 20),
-            if (_isLoading && _events.isEmpty)
-              SizedBox(
-                height: MediaQuery.of(context).size.height * 0.4,
-                child: const Center(child: CircularProgressIndicator()),
-              )
-            else if (_events.isEmpty)
-              SizedBox(
-                height: MediaQuery.of(context).size.height * 0.4,
-                child: Center(
-                  child: Text(
-                    'Chưa có sự kiện nào, hãy thêm lịch để bắt đầu.',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              )
-            else
-              ..._events.map((event) => _buildEventTile(context, event)),
-            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: _buildHeroCard(context),
+            ),
+            Expanded( // Bọc danh sách vào Expanded để sửa lỗi child.hasSize
+              child: _isLoading && _events.isEmpty
+                  ? const Center(child: CircularProgressIndicator())
+                  : _events.isEmpty
+                      ? Center(
+                          child: Text(
+                            'Chưa có sự kiện nào, hãy thêm lịch để bắt đầu.',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                            textAlign: TextAlign.center,
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: _events.length,
+                          itemBuilder: (context, index) => _buildEventTile(context, _events[index]),
+                        ),
+            ),
           ],
         ),
       ),
@@ -160,8 +161,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
           const SizedBox(height: 8),
           Text(
             'Theo dõi mọi sự kiện quan trọng trong ngày của bạn.',
-            style:
-                Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
           ),
           const SizedBox(height: 16),
           Align(
@@ -188,10 +188,47 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   }
 
   Widget _buildEventTile(BuildContext context, Event event) {
+    // XỬ LÝ GIAO DIỆN KHI SỰ KIỆN BỊ ẨN (Giống CalendarScreen)
+    if (event.status.toLowerCase() == 'hidden') {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: const LinearGradient(
+            colors: [Color(0xFFF5F5F5), Color(0xFFE0E0E0)],
+          ),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.visibility_off_outlined, color: Colors.grey),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    'Sự kiện đã bị admin ẩn',
+                    style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black54),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Liên hệ admin để được hỗ trợ khôi phục hoặc xem chi tiết.',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // GIAO DIỆN SỰ KIỆN BÌNH THƯỜNG
     final accentColor = _resolveColor(event.colorCode) ?? Colors.blueAccent;
     final statusColor = event.status.toLowerCase() == 'completed'
         ? Colors.green
-        : (event.status.toLowerCase() == 'hidden' ? Colors.grey : Colors.orange);
+        : Colors.orange;
     final subtitle = _formatDateRange(event.eventDate, event.endTime);
 
     return Padding(
@@ -274,7 +311,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                             style: Theme.of(context)
                                 .textTheme
                                 .bodySmall
-                                ?.copyWith(color: accentColor),
+                                ?.copyWith(color: accentColor, fontWeight: FontWeight.bold),
                           ),
                         ),
                       if (event.description != null && event.description!.isNotEmpty)

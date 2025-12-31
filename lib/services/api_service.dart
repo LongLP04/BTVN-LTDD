@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/app_user.dart';
 import '../utils/constants.dart';
@@ -259,5 +260,48 @@ class ApiService {
     }
 
     return exception.message ?? 'Không thể tạo sự kiện.';
+  }
+  // Khởi tạo GoogleSignIn với WEB Client ID (Ảnh image_4a7a72.png)
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    serverClientId: "866783897282-bsb23df7hdmb5c9eddqlhd9ago85gpsd.apps.googleusercontent.com",
+  );
+
+  Future<Response?> loginWithGoogle() async {
+    try {
+      // 1. Kích hoạt cửa sổ chọn tài khoản của Google
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return null;
+
+      // 2. Lấy thông tin xác thực
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      
+      // 3. Gửi idToken lên Backend ASP.NET Core
+      final response = await _dio.post(
+        '/Auth/google-login',
+        data: {
+          'idToken': googleAuth.idToken,
+        },
+      );
+
+      // --- PHẦN QUAN TRỌNG: Lưu Token và thông tin vào máy (Sửa lỗi 401) ---
+      if (response.statusCode == 200 && response.data != null) {
+        final prefs = await SharedPreferences.getInstance();
+        final data = response.data;
+        
+        // Lưu các thông tin cần thiết giống như hàm login thông thường
+        if (data['token'] != null) await prefs.setString('token', data['token']);
+        if (data['role'] != null) await prefs.setString('role', data['role']);
+        if (data['userId'] != null) await prefs.setString('userId', data['userId'].toString());
+        if (data['userName'] != null) await prefs.setString('userName', data['userName']);
+        
+        // Cập nhật ngay lập tức vào header của Dio để dùng luôn
+        _dio.options.headers['Authorization'] = 'Bearer ${data['token']}';
+      }
+
+      return response;
+    } catch (e) {
+      print("Lỗi chi tiết Google Login: $e");
+      return null;
+    }
   }
 }
